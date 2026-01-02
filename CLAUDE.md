@@ -12,7 +12,7 @@ The core differentiator is the **Context Engine** - a sophisticated system that 
 
 The system follows strict module boundaries:
 
-```
+```text
 VSCode Extension Layer
   ↓ (message passing)
 Extension Layer (VSCode Adapter)
@@ -67,7 +67,7 @@ The most critical subsystem. It answers: "What information should the model see,
 
 All prompts MUST follow this strict structure:
 
-```
+```text
 <SYSTEM>     - Identity, rules, non-negotiables (defined once, immutable)
 <CONTEXT>    - Retrieved files & metadata (from Context Engine ONLY)
 <TASK>       - What the model must do
