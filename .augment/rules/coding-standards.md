@@ -4,19 +4,7 @@ type: "always_apply"
 
 # Coding Standards
 
-## agent-naan × Continue.dev × Claude 4.5
-
-This document defines **mandatory coding conventions** for all code contributions.
-
-These standards exist to:
-
-- Ensure consistency across the codebase
-- Maintain strict module boundaries
-- Enable safe refactoring and evolution
-- Prevent security vulnerabilities
-- Facilitate code review and collaboration
-
-All code MUST comply with these standards before merge.
+Mandatory conventions for all code. Enforced via ESLint, Prettier, TypeScript strict mode, and CI/CD.
 
 ---
 
@@ -44,280 +32,62 @@ All code MUST comply with these standards before merge.
 
 ### 2.1 Naming Conventions
 
-```typescript
-// Interfaces: PascalCase with 'I' prefix for pure interfaces
-interface ILLMClient {
-  streamChat(messages: Message[]): AsyncIterable<Token>;
-}
-
-// Types: PascalCase without prefix
-type ContextQuery = {
-  intent: Intent;
-  tokenBudget: number;
-};
-
-// Classes: PascalCase
-class ContextEngine {
-  private readonly indexer: Indexer;
-}
-
-// Functions: camelCase
-function buildPrompt(context: Context): string {
-  // ...
-}
-
-// Constants: UPPER_SNAKE_CASE
-const MAX_TOKEN_BUDGET = 8000;
-const DEFAULT_MODEL = "claude-sonnet-4.5";
-
-// Enums: PascalCase for enum, UPPER_SNAKE_CASE for values
-enum RetrievalStrategy {
-  SEMANTIC = "SEMANTIC",
-  LEXICAL = "LEXICAL",
-  DEPENDENCY_WALK = "DEPENDENCY_WALK",
-}
-
-// Private members: prefix with underscore
-class Example {
-  private _internalState: State;
-
-  public get state(): State {
-    return this._internalState;
-  }
-}
-```
+- **Interfaces**: PascalCase with `I` prefix (`ILLMClient`)
+- **Types**: PascalCase without prefix (`ContextQuery`)
+- **Classes**: PascalCase (`ContextEngine`)
+- **Functions**: camelCase (`buildPrompt`)
+- **Constants**: UPPER_SNAKE_CASE (`MAX_TOKEN_BUDGET`)
+- **Enums**: PascalCase for enum, UPPER_SNAKE_CASE for values
+- **Private members**: prefix with underscore (`_internalState`)
 
 ### 2.2 File Naming
 
-```text
-src/
-  core/
-    context-engine.ts          # kebab-case for modules
-    llm-client.interface.ts    # .interface.ts for interface definitions
-    context-query.type.ts      # .type.ts for type definitions
-    retrieval.constants.ts     # .constants.ts for constants
-  __tests__/
-    context-engine.test.ts     # .test.ts for unit tests
-    integration.spec.ts        # .spec.ts for integration tests
-```
+- Modules: kebab-case (`context-engine.ts`)
+- Interfaces: `.interface.ts` suffix (`llm-client.interface.ts`)
+- Types: `.type.ts` suffix (`context-query.type.ts`)
+- Constants: `.constants.ts` suffix (`retrieval.constants.ts`)
+- Unit tests: `.test.ts` suffix (`context-engine.test.ts`)
+- Integration tests: `.spec.ts` suffix (`integration.spec.ts`)
 
 ### 2.3 Import Organization
 
-```typescript
-// 1. Node built-ins
-import * as path from "path";
-import * as fs from "fs/promises";
-
-// 2. External dependencies
-import * as vscode from "vscode";
-import { Anthropic } from "@anthropic-ai/sdk";
-
-// 3. Internal absolute imports (from src/)
-import { ContextEngine } from "@/core/context-engine";
-import { ILLMClient } from "@/core/llm-client.interface";
-
-// 4. Relative imports (same module)
-import { buildPrompt } from "./prompt-builder";
-import type { PromptSection } from "./types";
-```
+1. Node built-ins
+2. External dependencies
+3. Internal absolute imports (from `src/`)
+4. Relative imports (same module)
 
 ### 2.4 Type Safety
 
-```typescript
-// GOOD: Explicit types
-function processContext(query: ContextQuery, budget: number): Promise<Context> {
-  // ...
-}
-
-// BAD: Implicit any
-function processContext(query, budget) {
-  // ...
-}
-
-// GOOD: Discriminated unions
-type Result<T> = { success: true; data: T } | { success: false; error: Error };
-
-// GOOD: Readonly by default
-interface Config {
-  readonly maxTokens: number;
-  readonly model: string;
-}
-
-// GOOD: Const assertions
-const MODELS = {
-  HAIKU: "claude-haiku-4.5",
-  SONNET: "claude-sonnet-4.5",
-  OPUS: "claude-opus-4.5",
-} as const;
-
-type Model = (typeof MODELS)[keyof typeof MODELS];
-```
+- Explicit types for all functions
+- Discriminated unions for complex types
+- Readonly by default for interfaces
+- Const assertions for constants
+- No `any` types (except with documented justification)
+- No type assertions (`as`) without justification
 
 ### 2.5 Async/Await Patterns
 
-```typescript
-// GOOD: Explicit error handling
-async function fetchContext(query: string): Promise<Context> {
-  try {
-    const result = await contextEngine.query(query);
-    return result;
-  } catch (error) {
-    logger.error("Context fetch failed", { query, error });
-    throw new ContextFetchError("Failed to fetch context", { cause: error });
-  }
-}
-
-// GOOD: AsyncIterable for streams
-async function* streamTokens(prompt: string): AsyncIterable<Token> {
-  const stream = await llmClient.streamChat(prompt);
-
-  for await (const token of stream) {
-    yield token;
-  }
-}
-
-// BAD: Unhandled promise rejection
-async function badExample() {
-  contextEngine.query("test"); // Missing await, no error handling
-}
-```
+- Always use `async/await` (not `.then()`)
+- Explicit error handling with try/catch
+- Use AsyncIterable for streams
+- Never forget `await` on async operations
+- No unhandled promise rejections
 
 ---
 
 ## 3. Code Style & Formatting
 
-### 3.1 Tooling (Mandatory)
-
-- **ESLint**: Enforce code quality rules
-- **Prettier**: Enforce consistent formatting
-- **TypeScript Compiler**: Strict mode enabled
-
-### 3.2 ESLint Configuration
-
-```json
-{
-  "extends": [
-    "eslint:recommended",
-    "plugin:@typescript-eslint/recommended",
-    "plugin:@typescript-eslint/recommended-requiring-type-checking",
-    "prettier"
-  ],
-  "rules": {
-    "@typescript-eslint/no-explicit-any": "error",
-    "@typescript-eslint/explicit-function-return-type": "warn",
-    "@typescript-eslint/no-unused-vars": [
-      "error",
-      {
-        "argsIgnorePattern": "^_"
-      }
-    ],
-    "@typescript-eslint/no-floating-promises": "error",
-    "@typescript-eslint/strict-boolean-expressions": "warn",
-    "no-console": ["warn", { "allow": ["warn", "error"] }]
-  }
-}
-```
-
-### 3.3 Prettier Configuration
-
-```json
-{
-  "semi": true,
-  "trailingComma": "es5",
-  "singleQuote": false,
-  "printWidth": 80,
-  "tabWidth": 2,
-  "useTabs": false,
-  "arrowParens": "always",
-  "endOfLine": "lf"
-}
-```
+- **ESLint**: Enforce code quality (no `any`, no floating promises)
+- **Prettier**: Consistent formatting (80 char width, 2-space tabs)
+- **TypeScript**: Strict mode enabled, explicit return types
 
 ---
 
 ## 4. Documentation Standards
 
-### 4.1 TSDoc Comments
-
-````typescript
-/**
- * Retrieves relevant context for a given query using the Context Engine.
- *
- * This function orchestrates the full context retrieval pipeline:
- * 1. Intent classification
- * 2. Candidate retrieval
- * 3. Ranking and scoring
- * 4. Token budget allocation
- *
- * @param query - The user's natural language query
- * @param options - Optional configuration for retrieval strategy
- * @returns Promise resolving to ranked context items
- * @throws {ContextEngineError} When retrieval fails or budget is exceeded
- *
- * @example
- * ```typescript
- * const context = await retrieveContext("explain this error", {
- *   tokenBudget: 4000,
- *   strategy: RetrievalStrategy.SEMANTIC
- * });
- * ```
- */
-async function retrieveContext(
-  query: string,
-  options?: RetrievalOptions
-): Promise<Context> {
-  // Implementation
-}
-````
-
-### 4.2 Inline Comments
-
-```typescript
-// GOOD: Explain WHY, not WHAT
-// Use semantic search first because error messages often lack exact keywords
-const candidates = await semanticRetriever.search(query);
-
-// BAD: Redundant comment
-// Loop through candidates
-for (const candidate of candidates) {
-  // ...
-}
-
-// GOOD: Document non-obvious behavior
-// LanceDB returns results in arbitrary order, so we must sort by score
-const sorted = candidates.sort((a, b) => b.score - a.score);
-
-// GOOD: Mark intentional deviations
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-// Reason: VSCode API returns untyped objects for webview messages
-function handleMessage(message: any): void {
-  // ...
-}
-```
-
-### 4.3 Module-Level Documentation
-
-```typescript
-/**
- * @module core/context-engine
- *
- * The Context Engine is the core intelligence layer that determines
- * what information the LLM should see for any given request.
- *
- * **Architecture**:
- * - Indexer: Maintains embeddings and metadata
- * - Retriever: Fetches candidate context items
- * - Ranker: Scores and orders candidates
- * - Packer: Fits context within token budget
- *
- * **Key Constraints**:
- * - MUST respect token budgets (hard limit)
- * - MUST NOT mutate prompts outside this module
- * - MUST provide deterministic ordering
- *
- * @see {@link docs/context-engine.md} for full specification
- */
-```
+- **TSDoc**: All public APIs with `@param`, `@returns`, `@throws`, `@example`
+- **Inline Comments**: Explain WHY, not WHAT. Document non-obvious behavior
+- **Module Docs**: Include architecture, constraints, and references
 
 ---
 
@@ -666,68 +436,9 @@ class ContextEngine implements vscode.Disposable {
 
 ## 10. Python Conventions (Secondary)
 
-### 10.1 Type Hints (Mandatory)
-
-```python
-from typing import List, Optional, AsyncIterator
-
-# GOOD: Full type annotations
-async def embed_text(
-    text: str,
-    model: str = "text-embedding-3-small"
-) -> List[float]:
-    """Generate embeddings for the given text."""
-    # Implementation
-    pass
-
-# BAD: Missing type hints
-async def embed_text(text, model="text-embedding-3-small"):
-    pass
-```
-
-### 10.2 Naming Conventions
-
-```python
-# Constants: UPPER_SNAKE_CASE
-MAX_BATCH_SIZE = 100
-DEFAULT_MODEL = "text-embedding-3-small"
-
-# Functions: snake_case
-def process_embeddings(texts: List[str]) -> List[List[float]]:
-    pass
-
-# Classes: PascalCase
-class EmbeddingModel:
-    def __init__(self, model_name: str) -> None:
-        self._model_name = model_name
-```
-
-### 10.3 Docstrings (Google Style)
-
-```python
-def retrieve_context(
-    query: str,
-    top_k: int = 10
-) -> List[ContextItem]:
-    """Retrieve relevant context items for a query.
-
-    Args:
-        query: The search query string
-        top_k: Maximum number of results to return
-
-    Returns:
-        List of context items sorted by relevance score
-
-    Raises:
-        ValueError: If query is empty or top_k is negative
-
-    Example:
-        >>> items = retrieve_context("explain error", top_k=5)
-        >>> len(items)
-        5
-    """
-    pass
-```
+- **Type Hints**: Mandatory (PEP 484), Python 3.10+
+- **Naming**: Constants `UPPER_SNAKE_CASE`, functions `snake_case`, classes `PascalCase`
+- **Docstrings**: Google style with Args, Returns, Raises, Example
 
 ---
 
@@ -805,80 +516,19 @@ Before submitting code for review, verify:
 
 ## 13. Enforcement
 
-### 13.1 Pre-commit Hooks
-
-```json
-{
-  "husky": {
-    "hooks": {
-      "pre-commit": "lint-staged"
-    }
-  },
-  "lint-staged": {
-    "*.ts": ["eslint --fix", "prettier --write", "git add"],
-    "*.py": ["black", "mypy", "git add"]
-  }
-}
-```
-
-### 13.2 CI/CD Checks
-
 All pull requests MUST pass:
 
 1. TypeScript compilation (`tsc --noEmit`)
-2. ESLint (`npm run lint`)
-3. Prettier check (`npm run format:check`)
-4. Unit tests (`npm test`)
-5. Integration tests (`npm run test:integration`)
+2. ESLint (`pnpm lint`)
+3. Prettier check (`pnpm format:check`)
+4. Unit tests (`pnpm test`)
+5. Integration tests (`pnpm test:integration`)
 6. Coverage threshold (80% minimum)
 
-### 13.3 Merge Blockers
-
-The following are **automatic merge blockers**:
-
-- TypeScript compilation errors
-- ESLint errors (warnings allowed)
-- Test failures
-- Coverage below threshold
-- Module boundary violations
-- Hardcoded secrets
+**Merge Blockers**: TypeScript errors, ESLint errors, test failures, coverage below threshold, module boundary violations, hardcoded secrets
 
 ---
 
-## 14. Language-Specific Notes
+## 14. Summary
 
-### 14.1 English Only
-
-- All code, comments, documentation, and commit messages MUST be in English
-- Variable names, function names, and identifiers MUST be in English
-- No transliteration or mixed-language identifiers
-
-### 14.2 Rationale
-
-- Ensures consistency across international contributors
-- Facilitates code review and collaboration
-- Aligns with industry standards
-- Improves searchability and tooling support
-
----
-
-## 15. Summary
-
-These coding standards are **non-negotiable** and enforced through:
-
-- Automated tooling (ESLint, Prettier, TypeScript)
-- Pre-commit hooks
-- CI/CD pipeline checks
-- Code review process
-
-When in doubt, refer to:
-
-1. This document
-2. Existing codebase examples
-3. Project architecture documentation
-4. Team discussion
-
-**Guiding Principle**:
-
-> **Code is read more often than it is written.
-> Optimize for clarity, safety, and maintainability.**
+Code is read more often than written. Optimize for clarity, safety, and maintainability.
