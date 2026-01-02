@@ -40,6 +40,8 @@ export function BlockSettingsTopToolbar() {
 
   const shouldShowError = configError && configError?.length > 0;
 
+  const hideCreditsUI = import.meta.env.VITE_HIDE_CREDITS_UI === "true";
+
   const { creditStatus, isUsingFreeTrial, refreshCreditStatus } =
     useCreditStatus();
 
@@ -101,7 +103,8 @@ export function BlockSettingsTopToolbar() {
 
         {!hasActiveContent && (
           <div className="flex items-center gap-1.5">
-            {isUsingFreeTrial && (
+            {/* 只在未隱藏 Credits UI 且正在使用 Free Trial 時顯示 */}
+            {!hideCreditsUI && isUsingFreeTrial && (
               <ToolTip content="View remaining starter credits">
                 <StarterCreditsPopover
                   creditStatus={creditStatus}

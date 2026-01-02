@@ -36,6 +36,8 @@ const StreamErrorDialog = ({ error }: StreamErrorProps) => {
   const { session, refreshProfiles } = useAuth();
   const { mainEditor } = useMainEditor();
 
+  const hideCreditsUI = import.meta.env.VITE_HIDE_CREDITS_UI === "true";
+
   const {
     parsedError,
     statusCode,
@@ -121,7 +123,8 @@ const StreamErrorDialog = ({ error }: StreamErrorProps) => {
     </GhostButton>
   );
 
-  if (parsedError.includes("You're out of credits!")) {
+  // 如果隱藏 Credits UI，則不顯示 OutOfCreditsDialog，改為顯示一般錯誤
+  if (!hideCreditsUI && parsedError.includes("You're out of credits!")) {
     return <OutOfCreditsDialog />;
   }
 

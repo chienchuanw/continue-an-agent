@@ -68,12 +68,19 @@ export function OnboardingCardTabs({
   activeTab,
   onTabClick,
 }: OnboardingCardTabsProps) {
+  const hideCreditsUI = import.meta.env.VITE_HIDE_CREDITS_UI === "true";
+
   // Show Models Add-On (Credits) first as the primary option
-  const tabs = [
+  const allTabs = [
     OnboardingModes.MODELS_ADD_ON,
     OnboardingModes.API_KEY,
     OnboardingModes.LOCAL,
   ];
+
+  // 如果設定隱藏 Credits UI，則過濾掉 MODELS_ADD_ON
+  const tabs = hideCreditsUI
+    ? allTabs.filter((tab) => tab !== OnboardingModes.MODELS_ADD_ON)
+    : allTabs;
   return (
     <div>
       <div className="hidden sm:block">

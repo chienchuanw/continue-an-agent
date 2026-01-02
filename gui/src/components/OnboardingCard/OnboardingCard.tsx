@@ -22,16 +22,21 @@ export function OnboardingCard({ isDialog }: OnboardingCardProps) {
   const { activeTab, close, setActiveTab } = useOnboardingCard();
   const config = useAppSelector((store) => store.config.config);
 
+  const hideCreditsUI = import.meta.env.VITE_HIDE_CREDITS_UI === "true";
+  const defaultTab = hideCreditsUI
+    ? OnboardingModes.API_KEY
+    : OnboardingModes.MODELS_ADD_ON;
+
   if (getLocalStorage("onboardingStatus") === undefined) {
     setLocalStorage("onboardingStatus", "Started");
   }
 
-  // Default to MODELS_ADD_ON tab if no active tab is set
+  // Default to appropriate tab based on config
   useEffect(() => {
     if (!activeTab) {
-      setActiveTab(OnboardingModes.MODELS_ADD_ON);
+      setActiveTab(defaultTab);
     }
-  }, [activeTab, setActiveTab]);
+  }, [activeTab, setActiveTab, defaultTab]);
 
   function renderTabContent() {
     switch (activeTab) {
@@ -46,8 +51,8 @@ export function OnboardingCard({ isDialog }: OnboardingCardProps) {
     }
   }
 
-  // Always show tabs view, defaulting to Models Add-On
-  const currentTab = activeTab || OnboardingModes.MODELS_ADD_ON;
+  // Always show tabs view, defaulting to appropriate tab
+  const currentTab = activeTab || defaultTab;
 
   return (
     <ReusableCard

@@ -82,7 +82,9 @@ export class ClaudeLLMClient implements ILLMClient {
     options?: CompletionOptions,
   ): AsyncIterable<ChatMessage> {
     // Merge context token budget into options if provided
+    // Ensure model is always present (required by CompletionOptions interface)
     const mergedOptions: CompletionOptions = {
+      model: this.anthropic.model, // Use the model from the Anthropic instance
       ...options,
       maxTokens: context?.tokenBudget ?? options?.maxTokens,
     };
@@ -116,7 +118,9 @@ export class ClaudeLLMClient implements ILLMClient {
     ];
 
     // Merge context token budget into options
+    // Ensure model is always present (required by CompletionOptions interface)
     const mergedOptions: CompletionOptions = {
+      model: this.anthropic.model, // Use the model from the Anthropic instance
       ...options,
       maxTokens: context?.tokenBudget ?? options?.maxTokens ?? 256,
       temperature: options?.temperature ?? 0.2, // Lower temperature for code completion
