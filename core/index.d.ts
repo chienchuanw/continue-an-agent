@@ -485,6 +485,7 @@ export interface PromptLog {
   modelProvider: string;
   prompt: string;
   completion: string;
+  usage?: Usage;
 }
 
 export type MessageModes = "chat" | "agent" | "plan" | "background";
