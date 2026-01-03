@@ -8,12 +8,13 @@
  * - Token budget optimization
  */
 
+import { IntentClassifier } from "./intent/IntentClassifier";
+import { RetrievalStrategySelector } from "./intent/RetrievalStrategySelector";
 import {
-  IContextEngine,
+  ContextEngineConfig,
   ContextQuery,
   ContextResult,
-  ContextEngineConfig,
-  IntentType,
+  IContextEngine,
 } from "./types";
 
 /**
@@ -26,9 +27,13 @@ import {
 export class ContextEngine implements IContextEngine {
   private initialized: boolean = false;
   private config: ContextEngineConfig;
+  private intentClassifier: IntentClassifier;
+  private strategySelector: RetrievalStrategySelector;
 
   constructor(config: ContextEngineConfig) {
     this.config = config;
+    this.intentClassifier = new IntentClassifier();
+    this.strategySelector = new RetrievalStrategySelector();
   }
 
   /**
@@ -79,26 +84,33 @@ export class ContextEngine implements IContextEngine {
     }
 
     // Step 1: Classify intent if not provided
-    const intent = query.intent ?? this.classifyIntent(query.input);
+    const intentResult = query.intent
+      ? { intent: query.intent, confidence: 1.0 }
+      : this.intentClassifier.classify(query.input);
 
-    // Step 2: Retrieve candidates (placeholder for now)
+    const intent = intentResult.intent;
+
+    // Step 2: Select retrieval strategy based on intent
+    const strategy = this.strategySelector.selectStrategy(intent);
+
+    // Step 3: Retrieve candidates (placeholder for now)
     // TODO: Implement multi-method retrieval in Phase 3
     const candidates: any[] = [];
 
-    // Step 3: Rank candidates (placeholder for now)
+    // Step 4: Rank candidates (placeholder for now)
     // TODO: Implement ranking in Phase 3
     const rankedCandidates: any[] = [];
 
-    // Step 4: Apply token budget and pack (placeholder for now)
+    // Step 5: Apply token budget and pack (placeholder for now)
     // TODO: Implement token budgeting in Phase 4
     const items: any[] = [];
 
-    // Step 5: Return result
+    // Step 6: Return result
     return {
       items,
       intent,
       tokensUsed: 0,
-      retrievalMethods: this.getRetrievalMethods(intent),
+      retrievalMethods: strategy.methods.map((m) => m.toString()),
     };
   }
 
@@ -121,65 +133,5 @@ export class ContextEngine implements IContextEngine {
     // - Clear cache
 
     this.initialized = false;
-  }
-
-  /**
-   * Classify user intent from input text
-   *
-   * Uses rule-based classification for Phase 2.
-   * Will be replaced with ML-based classifier in Phase 5.
-   */
-  private classifyIntent(input: string): IntentType {
-    const lowerInput = input.toLowerCase();
-
-    // Bug fix patterns
-    if (
-      lowerInput.includes("error") ||
-      lowerInput.includes("bug") ||
-      lowerInput.includes("fix") ||
-      lowerInput.includes("broken")
-    ) {
-      return IntentType.BUG_FIX;
-    }
-
-    // Refactor patterns
-    if (
-      lowerInput.includes("refactor") ||
-      lowerInput.includes("improve") ||
-      lowerInput.includes("clean") ||
-      lowerInput.includes("optimize")
-    ) {
-      return IntentType.REFACTOR;
-    }
-
-    // Test patterns
-    if (
-      lowerInput.includes("test") ||
-      lowerInput.includes("spec") ||
-      lowerInput.includes("coverage")
-    ) {
-      return IntentType.TEST;
-    }
-
-    // Generate patterns
-    if (
-      lowerInput.includes("create") ||
-      lowerInput.includes("generate") ||
-      lowerInput.includes("add") ||
-      lowerInput.includes("implement")
-    ) {
-      return IntentType.GENERATE;
-    }
-
-    // Default to explain
-    return IntentType.EXPLAIN;
-  }
-
-  /**
-   * Get retrieval methods based on intent
-   */
-  private getRetrievalMethods(intent: IntentType): string[] {
-    // Placeholder - will be implemented in Phase 2
-    return ["semantic"];
   }
 }
