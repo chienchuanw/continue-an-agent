@@ -10,6 +10,7 @@
 
 import { IntentClassifier } from "./intent/IntentClassifier";
 import { RetrievalStrategySelector } from "./intent/RetrievalStrategySelector";
+import { CandidateFusion, IRetriever, Ranker } from "./retrieval";
 import {
   ContextEngineConfig,
   ContextQuery,
@@ -29,11 +30,26 @@ export class ContextEngine implements IContextEngine {
   private config: ContextEngineConfig;
   private intentClassifier: IntentClassifier;
   private strategySelector: RetrievalStrategySelector;
+  private retrievers: Map<string, IRetriever>;
+  private fusion: CandidateFusion;
+  private ranker: Ranker;
 
   constructor(config: ContextEngineConfig) {
     this.config = config;
     this.intentClassifier = new IntentClassifier();
     this.strategySelector = new RetrievalStrategySelector();
+    this.retrievers = new Map();
+    this.fusion = new CandidateFusion();
+    this.ranker = new Ranker();
+  }
+
+  /**
+   * Register a retriever
+   *
+   * Allows external code to register retrieval methods.
+   */
+  registerRetriever(retriever: IRetriever): void {
+    this.retrievers.set(retriever.getName(), retriever);
   }
 
   /**
@@ -56,6 +72,12 @@ export class ContextEngine implements IContextEngine {
     // - LanceDB vector store
     // - Embedding provider
     // - Metadata store
+
+    // TODO: Register retrievers in Phase 3
+    // - SemanticRetriever
+    // - LexicalRetriever
+    // - DependencyWalker
+    // - RecentEditsRetriever
 
     this.initialized = true;
   }
@@ -93,19 +115,37 @@ export class ContextEngine implements IContextEngine {
     // Step 2: Select retrieval strategy based on intent
     const strategy = this.strategySelector.selectStrategy(intent);
 
-    // Step 3: Retrieve candidates (placeholder for now)
-    // TODO: Implement multi-method retrieval in Phase 3
-    const candidates: any[] = [];
+    // Step 3: Retrieve candidates from multiple methods
+    const retrievalQuery: RetrievalQuery = {
+      text: query.input,
+      limit: 20, // Get more candidates for fusion
+    };
 
-    // Step 4: Rank candidates (placeholder for now)
-    // TODO: Implement ranking in Phase 3
-    const rankedCandidates: any[] = [];
+    const candidateLists = await Promise.all(
+      strategy.methods.map(async (method) => {
+        const retriever = this.retrievers.get(method.toString());
+        if (!retriever) {
+          return [];
+        }
+        return await retriever.retrieve(retrievalQuery);
+      }),
+    );
 
-    // Step 5: Apply token budget and pack (placeholder for now)
+    // Step 4: Fuse candidates from multiple methods
+    const fusedCandidates = this.fusion.fuse(candidateLists);
+
+    // Step 5: Rank candidates with intent-aware scoring
+    const rankedCandidates = this.ranker.rank(
+      fusedCandidates,
+      intent,
+      query.input,
+    );
+
+    // Step 6: Apply token budget and pack (placeholder for now)
     // TODO: Implement token budgeting in Phase 4
     const items: any[] = [];
 
-    // Step 6: Return result
+    // Step 7: Return result
     return {
       items,
       intent,
