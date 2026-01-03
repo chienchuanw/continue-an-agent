@@ -8,9 +8,20 @@
  * - Token budget optimization
  */
 
+import {
+  BudgetAllocator,
+  PromptPacker,
+  TokenCounter,
+  TruncationStrategy,
+} from "./budget";
 import { IntentClassifier } from "./intent/IntentClassifier";
 import { RetrievalStrategySelector } from "./intent/RetrievalStrategySelector";
-import { CandidateFusion, IRetriever, Ranker } from "./retrieval";
+import {
+  CandidateFusion,
+  IRetriever,
+  Ranker,
+  RetrievalQuery,
+} from "./retrieval";
 import {
   ContextEngineConfig,
   ContextQuery,
@@ -33,6 +44,10 @@ export class ContextEngine implements IContextEngine {
   private retrievers: Map<string, IRetriever>;
   private fusion: CandidateFusion;
   private ranker: Ranker;
+  private tokenCounter: TokenCounter;
+  private budgetAllocator: BudgetAllocator;
+  private promptPacker: PromptPacker;
+  private truncationStrategy: TruncationStrategy;
 
   constructor(config: ContextEngineConfig) {
     this.config = config;
@@ -41,6 +56,10 @@ export class ContextEngine implements IContextEngine {
     this.retrievers = new Map();
     this.fusion = new CandidateFusion();
     this.ranker = new Ranker();
+    this.tokenCounter = new TokenCounter();
+    this.budgetAllocator = new BudgetAllocator();
+    this.promptPacker = new PromptPacker(this.tokenCounter);
+    this.truncationStrategy = new TruncationStrategy(this.tokenCounter);
   }
 
   /**
@@ -141,15 +160,27 @@ export class ContextEngine implements IContextEngine {
       query.input,
     );
 
-    // Step 6: Apply token budget and pack (placeholder for now)
-    // TODO: Implement token budgeting in Phase 4
-    const items: any[] = [];
-
-    // Step 7: Return result
-    return {
-      items,
+    // Step 6: Calculate token budget allocation
+    const inputTokens = this.tokenCounter.countTokens(query.input);
+    const budgetAllocation = this.budgetAllocator.allocate(
+      query.tokenBudget,
+      inputTokens,
       intent,
-      tokensUsed: 0,
+    );
+
+    // Step 7: Pack candidates into context items within budget
+    const contextBudget =
+      budgetAllocation.allocations.get("context" as any) ?? 0;
+    const packingResult = this.promptPacker.pack(
+      rankedCandidates,
+      contextBudget,
+    );
+
+    // Step 8: Return result
+    return {
+      items: packingResult.items,
+      intent,
+      tokensUsed: packingResult.tokensUsed,
       retrievalMethods: strategy.methods.map((m) => m.toString()),
     };
   }
